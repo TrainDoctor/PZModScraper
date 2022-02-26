@@ -13,3 +13,9 @@ options:
                         the id of your workshop collection, found at the end of a collection like this:
                         https://steamcommunity.com/sharedfiles/filedetails/?id=2736394657
 ```
+
+You can then put these output of this script into the ``WorkshopIDs=`` and ``ModIDs=`` fields in your server config.
+
+Desired features if I ever get around to adding them:
+- [ ] Config files for usage based on yaml
+- [ ] Allow for excluding mod ids based on yaml config(s) 
