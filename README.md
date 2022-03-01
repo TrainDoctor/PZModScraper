@@ -17,5 +17,5 @@ options:
 You can then put these output of this script into the ``WorkshopIDs=`` and ``ModIDs=`` fields in your server config.
 
 Desired features if I ever get around to adding them:
-- [ ] Config files for usage based on yaml
+- [x] Config files for usage based on yaml
 - [x] Allow for excluding mod ids
