@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
         {
             "name": "Run Scraper",
             "type": "python",
@@ -21,7 +20,7 @@
                 "-k",
                 "4444444444444444444444444444444",
                 "-c",
-                "2736394657"
+                "2736394657",
             ],
             "console": "integratedTerminal"
         },
@@ -38,5 +37,35 @@
             ],
             "console": "integratedTerminal"
         },
+        {
+            "name": "Run Scraper key good, collect good, exclusions good",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/getcollection.py",
+            "args": [
+                "-k",
+                "4444444444444444444444444444444",
+                "-c",
+                "2736394657",
+                "-e",
+                "AdvancedVolumeEnabler,lgd_antibodies,Respawn"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Scraper key good, collect good, exclusions bad",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/getcollection.py",
+            "args": [
+                "-k",
+                "4444444444444444444444444444444",
+                "-c",
+                "2736394657",
+                "-e",
+                "AdvancedVolumeEnabler,lgdantibodies,respawn"
+            ],
+            "console": "integratedTerminal"
+        }
     ]
 }

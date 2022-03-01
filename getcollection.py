@@ -1,105 +1,73 @@
 # cli options need to collect:
-##  Steam WebAPI Key, Collection ID
+##  Steam WebAPI Key, Collection ID, Excluded Mod IDs
 
-# import yaml
 import argparse
-import json
+import difflib
+import os
 import re
 
 from requests import exceptions
 from steam.webapi import WebAPI
+from yaml import load
+
+
+class splitargs(argparse.Action):
+    def __call__(self, parser, namespace, values: str, option_string=None):
+        setattr(namespace, self.dest, [v for v in values.split(',') if v])
 
 def handle_argv(count: int, args: list):
     ## if len 0, return 1
     if len(args) == 0:
         return 1
-    ## if len > 1, return 2
+    ## if len > count, return 2
     elif len(args) > count:
+        print("More arguements given than allowed.")
         return 2
     ## lol how'd you get here
     elif len(args) < 0:
         raise ValueError("Negative argv count, impossible scenario.")
     ## if len == count, return 0
-    return 0
+    else:
+        return 0
 
-## gather raw json data of desired collection
-def request_collection(collectionids: list, collectionamount: int):
-    try:
-        return api.call(method_path='ISteamRemoteStorage.GetCollectionDetails',\
-            collectioncount=collectionamount, publishedfileids=collectionids)
-    except exceptions.HTTPError as e:
-        print("Collection ID is invalid, please try again.")
-        exit()
-    # print(collectioninfo)
-    
+## yield values by looking recursively
+## looking through json data via yield (coroutine)
+def item_generator(json_input: dict, lookup_key,):
+    if isinstance(json_input, dict):
+        for k, v in json_input.items():
+            if k == lookup_key:
+                yield v
+            else:
+                yield from item_generator(v, lookup_key) 
+    elif isinstance(json_input, list):
+        for item in json_input:
+                yield from item_generator(item, lookup_key)
+
 ## gather raw json data of desired mod/collection
-def request_ugc(collectionamount: int, workshopidlist: list, *argv):
+def request_ugc(amount: int, workshopidlist: list, *argv) -> dict:
     argsvalid = handle_argv(1, argv)
     try:
-        if argsvalid == 1:
+        if argsvalid == 2:
             if "collection" or "mod" in argv[0]:
-                print("Invalid invocation, must be \"collection\" or \"mod\".")
-                exit()
-            else:
                 print("Multiple arguments in single argument.\n"+\
                     "Specify only: \"collection\" or \"mod\".")
                 exit()
         else:
             if "collection" in str(argv[0]):
                 return api.call(method_path='ISteamRemoteStorage.GetCollectionDetails',\
-                collectioncount=collectionamount, publishedfileids=workshopidlist)
+                collectioncount=amount, publishedfileids=workshopidlist)
             if "mod" in str(argv[0]):
                 return api.call(method_path='ISteamRemoteStorage.GetPublishedFileDetails',\
-                itemcount=collectionamount, publishedfileids=workshopidlist)
+                itemcount=amount, publishedfileids=workshopidlist)
     except exceptions.HTTPError as e:
         print("HTTP Error encountered, exiting." + e.with_traceback())
         exit()
-    # print(modinfo)
-
-## convert str json to usable Mod ID(s)
-def process_modjson(modjson: str):
-    for fulldescription in item_generator(modjson, "description"):
-        slimdescription = re.findall("(?:Mod(?:\s?)ID)(?:\:)(?:[\s+])([\w._-]+)",\
-            fulldescription)
-    # print(slimdescription.groups())
-    if slimdescription == None:
-        print("Mod ID not found!")
-        print("Check page for Mod ID", end=" ")
-        print("and please alert the maintainer of this script!")
-    else:
-        buffer = []
-        for modid in slimdescription:
-            if modid in buffer:
-                pass
-            else:
-                yield modid
-            buffer.append(modid)
-    
-## gather raw json from a Workshop ID
-def get_modjson(workshopid: str):
-    out = []
-    rawjson = request_ugc(1, [workshopid], "mod")
-    modjson = json.loads(json.dumps(rawjson))
-    for modid in process_modjson(modjson):
-        out.append(str(modid))
-    return out
 
 def update_collection(collection: dict, workshopid: str, modids: list):
     if workshopid in collection:
         collection.update({str(workshopid): modids})
     else:
         print("Could not find Workshop ID " + workshopid + " in " + str(collection))
-        
-def item_generator(json_input, lookup_key):
-    if isinstance(json_input, dict):
-        for k, v in json_input.items():
-            if k == lookup_key:
-                yield v
-            else:
-                yield from item_generator(v, lookup_key)
-    elif isinstance(json_input, list):
-        for item in json_input:
-            yield from item_generator(item, lookup_key)
             
 def get_ids(collection: dict, *argv):
     tocollect= ""
@@ -133,36 +101,55 @@ def get_ids(collection: dict, *argv):
         else:
             print("How'd you manage to end up here?")
             return    
-          
-parser = argparse.ArgumentParser(\
-    description='Script to pull Workshop IDs and Mod IDs for Steam Workshop collections.')
-parser.add_argument('-k', '--key', metavar='QQQQWWWWEEEERRRRTTTTYYYYUUUUIIII', type=str, nargs="*",\
-    help="your Steam WebAPI key as found at https://steamcommunity.com/dev/apikey")
-parser.add_argument('-c', '--collection', metavar='2736394657', type=str, nargs="+",\
-    help="the id of your workshop collection, found at the end of a collection like this:\
-        https://steamcommunity.com/sharedfiles/filedetails/?id=2736394657",\
-        default="0")
-
-cli_args = parser.parse_args()
 
 ###########################################
 ### \|/ Section 0, Preliminary Work \|/ ###
 ###########################################
 
-## get api key
-apikey = cli_args.key
+parser = argparse.ArgumentParser(\
+    description='Script to pull Workshop IDs and Mod IDs for Steam Workshop collections.')
+parser.add_argument('-k', '--key', metavar='QQQQWWWWEEEERRRRTTTTYYYYUUUUIIII',\
+    type=str, nargs="*",\
+    help="Steam WebAPI key as found at https://steamcommunity.com/dev/apikey")
+parser.add_argument('-c', '--collections', metavar='2736394657,7564936372,6374732965',\
+    type=str, nargs="?", default="", action=splitargs,\
+    help="id of a workshop collection:\
+    https://steamcommunity.com/sharedfiles/filedetails/?id=2736394657")
+parser.add_argument('-e', '--exclude', metavar='abc,def,ghi',\
+    type=str, nargs="?", default="", action=splitargs,\
+    help="List of Mod IDs to be excluded from output.")
+parser.add_argument('--config', metavar='/path/to/config',\
+    type=str, nargs="?", default=str(os.getcwd())+"/config.yaml", action=splitargs,\
+    help="Path to and name of config file. Defaults to \"config.yaml\".")
 
+## create apikey placeholder
+apikey = ""
 ## get collection id and amount of collections
-collectionidlist = []
+collectionids = []
+## get list of strings to exclude from output
+excluded = []
 
-for arg in cli_args.collection:
-    collectionidlist.append(arg)
+cli_args = parser.parse_args()
 
-## dictionary of workshop IDs as the key
-## and an array of Mod IDs as corresponding value
-# collectiondict = dict([("workshopid", ["modid"])])
-collectiondict = {}
-collectionsize = 0
+usingconfig = False
+
+if usingconfig:
+    pass
+else:
+    ## get api key
+    apikey = cli_args.key
+    ## get collection ID(s)
+    for id in cli_args.collections:
+        collectionids.append(id)
+    ## get excluded Mod ID(s)
+    for exclusion in cli_args.exclude:
+        excluded.append(str(exclusion))
+
+
+
+#############################################
+### \|/ Section 1, Connection Testing \|/ ###
+#############################################
 
 reachedSteam = True
 
@@ -185,71 +172,91 @@ except exceptions.HTTPError as e:
     reachedSteam = False
 finally:
     if not reachedSteam:
+        print("No errors have been encountered but Steam could not be reached.")
         exit()
-    api = WebAPI(apikey, format="json", https=True)
-       
+    else:
+        api = WebAPI(apikey, format="json", https=True)
+
+## dictionary of workshop IDs as the key
+## and an array of Mod IDs as corresponding value
+# collectiondict = dict([("workshopid", ["modid"])])
+wscollection = {}
+wscollectionsize = 0
+      
 ###############################################
-### \|/ Section 1, Workshop ID Scraping \|/ ###
+### \|/ Section 2, Workshop ID Scraping \|/ ###
 ###############################################
+
+## print a newline to seperate 
+## input from Workshop ID output
+print("")
 
 ## request raw json data
-collectionraw = request_collection(collectionidlist, len(collectionidlist))
+collectionjson = request_ugc(len(collectionids), collectionids,\
+    "collection")
 
-## make python happy with json data
-collectionjson = json.loads(json.dumps(collectionraw))
-# print(collectionjson)
-
-## add keys (workshop IDs) to collectiondict
+## add keys (WSIDs) to wscollection
 for workshopid in item_generator(collectionjson, "publishedfileid"):
     ## in case the collection id(s) aren't yielded, use try except
     try:
         ## make sure that we're not grabbing the extra
         ## collection description, even if it won't have any Mod IDs.
-        for collectionid in collectionidlist:
+        for collectionid in collectionids:
             if str(workshopid) == str(collectionid):
                 break
             else:
-                collectiondict.update({str(workshopid): [""]})
+                wscollection.update({str(workshopid): ['']})
     except ValueError:
         print("Handled ID not in list error.")
-print("")
+
 ## print out workshop ids in config file format
-for wsid, modids in collectiondict.items():
+for wsid,modid in wscollection.items():
     print(wsid, end=";")
 print("")
-# for modid in modids:
-#     print(wsid, modid)
 
 ## adjust size of collection to correspond to collectiondict's size
-collectionsize = len(collectiondict)
+wscollectionsize = len(wscollection)
 
 ##########################################
-### \|/ Section 2, Mod ID Scraping \|/ ###
+### \|/ Section 3, Mod ID Scraping \|/ ###
 ##########################################
 
+## print a newline to put a space
+## between WSID output and MID output
 print("")
 
-workshopidlist = get_ids(collectiondict, "workshop")
+## instead of iterating through WSIDs to get MIDs,
+## collect all raw mod json in a single call
+modjson = request_ugc(len(wscollection),\
+    list(wscollection.keys()), "mod")
 
-## parse Mod ID(s) from
-## a list of Workshop IDs
-for id in workshopidlist:
-    modids = get_modjson(id)
-    update_collection(collectiondict, id, modids)
+## use zip to join the two generator's output for good sorting
+joinedinfo = zip(item_generator(modjson, "publishedfileid"),\
+    item_generator(modjson, "description"))
 
-for workshopdids,modids in collectiondict.items():
+spacerneeded = False
+for wsid,description in joinedinfo:
+    ## mod ids in description
+    ids = re.findall\
+        ("(?:Mod(?:\s?)ID)(?:\:)(?:[\s+])([\w._-]+)", description)
+    update_collection(wscollection, wsid, ids)
+    for id in ids:
+        for exclude in excluded:
+            ratio = difflib.SequenceMatcher(lambda x: x in " \t", exclude, id).ratio()
+            if ratio >= 0.5 and ratio < 0.990:
+                spacerneeded = True
+                print("One of your exclusions is miss-spelled or similair to another ID.")
+                print("\tExcluded ID: " + str(exclude) + "\n\tMod ID: " + str(id))
+        
+if spacerneeded:
+    print("")
+
+## print out list of Mod IDs
+## which correspond to Workshop IDs
+for workshopdids,modids in wscollection.items():
     for modid in modids:
-        print(modid, end=";")
-print("")
-
-## gather json data of desired mods
-try:
-    modinfo = api.call(method_path='ISteamRemoteStorage.GetPublishedFileDetails',\
-        itemcount=collectionsize, publishedfileids=workshopidlist)
-except exceptions.HTTPError as e:
-    print("HTTP Error encountered, exiting." + e.with_traceback())
-    exit()
-# print(modinfo)
+        if str(modid) not in excluded:
+            print(modid, end=";")
+print("\n")
 
 ### TODO: Add config support (yaml)
-### TODO: Add support for excluding Mod IDs from output via a config.

@@ -1,7 +1,6 @@
 {
     "recommendations": [
             "njpwerner.autodocstring",
-            "magicstack.MagicPython",
             "ms-python.python",
             "donjayamanne.python-environment-manager",
             "GitHub.vscode-pull-request-github",
