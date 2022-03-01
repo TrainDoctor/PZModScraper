@@ -10,7 +10,6 @@ from requests import exceptions
 from steam.webapi import WebAPI
 from yaml import load
 
-
 class splitargs(argparse.Action):
     def __call__(self, parser, namespace, values: str, option_string=None):
         setattr(namespace, self.dest, [v for v in values.split(',') if v])

@@ -18,4 +18,4 @@ You can then put these output of this script into the ``WorkshopIDs=`` and ``Mod
 
 Desired features if I ever get around to adding them:
 - [ ] Config files for usage based on yaml
-- [ ] Allow for excluding mod ids based on yaml config(s) 
+- [x] Allow for excluding mod ids
