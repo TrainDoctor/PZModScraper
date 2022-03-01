@@ -11,7 +11,6 @@ import yaml
 from requests import exceptions
 from steam.webapi import WebAPI
 
-
 class splitargs(argparse.Action):
     def __call__(self, parser, namespace, values: str, option_string=None):
         setattr(namespace, self.dest, [v for v in values.split(',') if v])
@@ -107,6 +106,10 @@ def get_ids(collection: dict, *argv):
 ### \|/ Section 0, Preliminary Work \|/ ###
 ###########################################
 
+defaultfilepath = str(os.path.realpath(__file__))
+defaultfilepath = defaultfilepath.replace("getcollection.py",\
+    "config.yaml")
+
 parser = argparse.ArgumentParser(\
     description='Script to pull Workshop IDs and Mod IDs for Steam Workshop collections.')
 parser.add_argument('-k', '--key', metavar='QQQQWWWWEEEERRRRTTTTYYYYUUUUIIII',\
@@ -120,7 +123,7 @@ parser.add_argument('-e', '--exclude', metavar='abc,def,ghi',\
     type=str, nargs="?", default="", action=splitargs,\
     help="List of Mod IDs to be excluded from output.")
 parser.add_argument('--configpath', metavar='/path/to/config',\
-    type=str, nargs="?", default=str(os.getcwd())+"/config.yaml", action=splitargs,\
+    type=str, nargs="?", default=defaultfilepath, action=splitargs,\
     help="Path to and name of config file. Defaults to \"config.yaml\" in local dir.")
 parser.add_argument('config', metavar='default',\
     type=str, nargs="?", default="none",\
