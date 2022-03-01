@@ -285,7 +285,7 @@ for wsid,description in joinedinfo:
     for id in ids:
         for exclude in excluded:
             ratio = difflib.SequenceMatcher(lambda x: x in " \t", exclude, id).ratio()
-            if ratio >= 0.5 and ratio < 0.990:
+            if ratio >= 0.5 and ratio < 0.636:
                 spacerneeded = True
                 print("One of your exclusions is miss-spelled or similair to another ID.")
                 print("\tExcluded ID: " + str(exclude) + "\n\tMod ID: " + str(id))
