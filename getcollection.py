@@ -137,10 +137,10 @@ cli_args = parser.parse_args()
 
 usingconfig = False
 
-if cli_args.config != None:
-    usingconfig = True
-elif cli_args.config == "none":
+if cli_args.config == "none": 
     print("No config specified.")
+elif cli_args.config != None:
+    usingconfig = True
 else:
     print("How did I get here?\nhttps://www.youtube.com/watch?v=djT_hBVbmGc")
 
@@ -297,5 +297,3 @@ for workshopdids,modids in wscollection.items():
         if str(modid) not in excluded:
             print(modid, end=";")
 print("\n")
-
-### TODO: Add config support (yaml)
