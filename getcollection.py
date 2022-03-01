@@ -5,10 +5,12 @@ import argparse
 import difflib
 import os
 import re
+import io
 
+import yaml
 from requests import exceptions
 from steam.webapi import WebAPI
-from yaml import load
+
 
 class splitargs(argparse.Action):
     def __call__(self, parser, namespace, values: str, option_string=None):
@@ -117,9 +119,12 @@ parser.add_argument('-c', '--collections', metavar='2736394657,7564936372,637473
 parser.add_argument('-e', '--exclude', metavar='abc,def,ghi',\
     type=str, nargs="?", default="", action=splitargs,\
     help="List of Mod IDs to be excluded from output.")
-parser.add_argument('--config', metavar='/path/to/config',\
+parser.add_argument('--configpath', metavar='/path/to/config',\
     type=str, nargs="?", default=str(os.getcwd())+"/config.yaml", action=splitargs,\
-    help="Path to and name of config file. Defaults to \"config.yaml\".")
+    help="Path to and name of config file. Defaults to \"config.yaml\" in local dir.")
+parser.add_argument('config', metavar='default',\
+    type=str, nargs="?", default="none",\
+    help="Config preset within configuration file to use. Files support multi-config.")
 
 ## create apikey placeholder
 apikey = ""
@@ -132,8 +137,44 @@ cli_args = parser.parse_args()
 
 usingconfig = False
 
+if cli_args.config != None:
+    usingconfig = True
+elif cli_args.config == "none":
+    print("No config specified.")
+else:
+    print("How did I get here?\nhttps://www.youtube.com/watch?v=djT_hBVbmGc")
+
 if usingconfig:
-    pass
+    configfile = yaml.load(stream=open(cli_args.configpath, 'r'),\
+        Loader=yaml.FullLoader)
+    conf = configfile.get(str(cli_args.config))
+    for k,v in conf.items():
+        if k == "apikey":
+            # print("apikey")
+            if len(v) > 0:
+                apikey = str(v)
+            else:
+                print("API Key from config not present. "+\
+                    "Run \'python getcollection.py --help\'"+\
+                    " for more info.")
+                exit()
+            continue
+        if k == "collections":
+            # print("collections")
+            if len(v) > 0:
+                for id in v:
+                    collectionids.append(id)
+            else:
+                print("Collection ID from config not present. "+\
+                    "Run \'python getcollection.py --help\'"+\
+                    " for more info.")
+                exit()
+            continue
+        if k == "exclusions":
+            # print("exclusions")
+            for exclusion in v:
+                excluded.append(str(exclusion))
+            continue
 else:
     ## get api key
     apikey = cli_args.key
@@ -143,8 +184,6 @@ else:
     ## get excluded Mod ID(s)
     for exclusion in cli_args.exclude:
         excluded.append(str(exclusion))
-
-
 
 #############################################
 ### \|/ Section 1, Connection Testing \|/ ###
@@ -166,15 +205,16 @@ except (exceptions.ConnectionError, exceptions.ConnectTimeout) as e:
     print("WebAPI appears to not be responding.\n\
           Check your internet connection and or http://steamstat.us")
     reachedSteam = False
+    exit()
 except exceptions.HTTPError as e:
     print("WebAPI not working or WebAPI key invalid.")
     reachedSteam = False
-finally:
-    if not reachedSteam:
-        print("No errors have been encountered but Steam could not be reached.")
-        exit()
-    else:
-        api = WebAPI(apikey, format="json", https=True)
+    exit()
+if not reachedSteam:
+    print("No errors encountered but Steam could not be reached.")
+    exit()
+else:
+    api = WebAPI(apikey, format="json", https=True)
 
 ## dictionary of workshop IDs as the key
 ## and an array of Mod IDs as corresponding value

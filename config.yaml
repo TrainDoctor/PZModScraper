@@ -1,0 +1,16 @@
+# make sure to get a Steam WebAPI key from
+# https://steamcommunity.com/dev/apikey
+# using localhost is sufficent as an ip
+default:
+  apikey: "" # change me! (required)
+  collections: ["2736394657"] # change me! (required)
+  exclusions: [""] # change me! (optional)
+defexample: # default example (removable)
+  apikey: "" # (user api key required for demonstration)
+  collections: ["2736394657"]
+  exclusions: [""]
+execexample: # exclusion example (removable)
+  apikey: "" # (user api key required for demonstration)
+  collections: ["2736394657"]
+  exclusions: ["AdvancedVolumeEnabler"]
+# add your own as needed!
