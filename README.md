@@ -1,9 +1,9 @@
 # PZModScraper
 Script to pull Workshop IDs and Mod IDs for Steam Workshop collections.
 
-Required to run: pyyaml, steam
+Required to run: PyYAML, steam, requests
 
-``pip install yaml steam``
+``pip install PyYAML steam requests``
 
 ```
 usage: getcollection.py [-h] [-k [QQQQWWWWEEEERRRRTTTTYYYYUUUUIIII ...]] [-c [2736394657,7564936372,6374732965]] [-e [abc,def,ghi]] [--configpath [/path/to/config]] [default]
