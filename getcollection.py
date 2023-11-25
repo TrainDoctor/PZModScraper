@@ -280,7 +280,7 @@ spacerneeded = False
 for wsid,description in joinedinfo:
     ## mod ids in description
     ids = re.findall\
-        ("(?:Mod(?:\s?)ID)(?:\:)(?:[\s+])([\w._-]+)", description)
+        ("(?:Mod(?:\s?)ID)(?:\:)(?:[\s+])([\w._&-]+)", description)
     update_collection(wscollection, wsid, ids)
     for id in ids:
         for exclude in excluded:
